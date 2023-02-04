@@ -16,9 +16,14 @@ Set WiFi settings
 cp secret.sample secret.h
 ```
 
-Run HTTP requests
+## Upload on specific board
+
 ```
-curl ...
+pio run -e d1_mini -t upload
+```
+or
+```
+pio run -e nodemcu-32s -t upload
 ```
 
 ## Documentation

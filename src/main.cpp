@@ -1,6 +1,17 @@
 #include <Arduino.h>
+
+#if __cplusplus > 199711L
+    #define register
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
 #include <WiFiClient.h>
 #include <WebServer.h>
+#else
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#endif
+
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 #include <StreamUtils.h>
@@ -10,16 +21,26 @@
 
 #define EEPROM_SIZE 100
 #define LOGLEVEL LOG_LEVEL_VERBOSE
-#define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #define NUM_LEDS 15
-#define DATA_PIN 4
 #define COLOR_ORDER GRB
 #define LED_TYPE WS2812B
+
+#ifdef ARDUINO_ARCH_ESP32
+#define DATA_PIN 4
+#define FASTLED_ESP8266_NODEMCU_PIN_ORDER
+#else
+#define DATA_PIN D6
+#define FASTLED_ESP8266_NODEMCU_PIN_ORDER
+#endif
 
 int RGBAcolor[4];
 CRGB leds[NUM_LEDS];
 
+#ifdef ARDUINO_ARCH_ESP32
 WebServer httpServer(80);
+#else
+ESP8266WebServer httpServer(80);
+#endif
 
 // Set Default Leds Values
 void setDefaultLedsValues()

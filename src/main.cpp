@@ -35,6 +35,7 @@
 
 int RGBAcolor[4];
 CRGB leds[NUM_LEDS];
+bool wave = false;
 
 #ifdef ARDUINO_ARCH_ESP32
 WebServer httpServer(80);
@@ -141,6 +142,39 @@ void setState()
   }
 }
 
+// Set wave rainbow
+void activeWave()
+{
+  DynamicJsonDocument doc(512);
+  if (httpServer.arg("toggle") == "true") {
+    doc["toggle"] = true;
+  } else {
+    doc["toggle"] = false;
+  }
+
+  if (wave == false) {
+    if (doc["toggle"] == false) {
+      doc["wave"] = "deactivate";
+    } else {
+      wave = true;
+      doc["wave"] = "activate";
+    }
+  } else {
+    if (doc["toggle"] == true) {
+      wave = false;
+      doc["wave"] = "deactivate";
+    } else {
+      doc["wave"] = "activate";
+    }
+  }
+  
+  Serial.print(F("Stream..."));
+  String buf;
+  serializeJson(doc, buf);
+  httpServer.send(200, F("application/json"), buf);
+  Serial.print(F("done."));
+}
+
 // Serving WiFi Settings
 void getSettings()
 {
@@ -150,16 +184,16 @@ void getSettings()
   doc["gw"] = WiFi.gatewayIP().toString();
   doc["nm"] = WiFi.subnetMask().toString();
   if (httpServer.arg("signalStrength")== "true") {
-      doc["signalStrengh"] = WiFi.RSSI();
+    doc["signalStrengh"] = WiFi.RSSI();
   }
   if (httpServer.arg("chipInfo")== "true") {
-      // doc["chipId"] = ESP.getChipId();
-      // doc["flashChipId"] = ESP.getFlashChipId();
-      doc["flashChipSize"] = ESP.getFlashChipSize();
-      // doc["flashChipRealSize"] = ESP.getFlashChipRealSize();
+    // doc["chipId"] = ESP.getChipId();
+    // doc["flashChipId"] = ESP.getFlashChipId();
+    doc["flashChipSize"] = ESP.getFlashChipSize();
+    // doc["flashChipRealSize"] = ESP.getFlashChipRealSize();
   }
   if (httpServer.arg("freeHeap")== "true") {
-      doc["freeHeap"] = ESP.getFreeHeap();
+    doc["freeHeap"] = ESP.getFreeHeap();
   }
 
   Serial.print(F("Stream..."));
@@ -173,11 +207,12 @@ void getSettings()
 void restServerRouting()
 {
   httpServer.on("/", HTTP_GET, []() {
-      httpServer.send(200, F("text/html"), F("Ok"));
+    httpServer.send(200, F("text/html"), F("Ok"));
   });
   httpServer.on(F("/state"), HTTP_GET, getState);
   httpServer.on(F("/settings"), HTTP_GET, getSettings);
   httpServer.on(F("/change"), HTTP_POST, setState);
+  httpServer.on(F("/wave"), HTTP_GET, activeWave);
 }
 
 // Manage not found URL
@@ -241,4 +276,15 @@ void setup()
 void loop()
 {	
   httpServer.handleClient();
+
+  if (wave == true) {
+    uint8_t thisSpeed = 10;
+    uint8_t deltaHue= 10;
+    uint8_t thisHue = beat8(thisSpeed, 255); 
+    fill_rainbow(leds, NUM_LEDS, thisHue, deltaHue);            
+    FastLED.show();
+  } else {
+    fill_solid(leds, NUM_LEDS, CRGB(EEPROM.read(0), EEPROM.read(1), EEPROM.read(2)));
+    FastLED.show();
+  }
 }
